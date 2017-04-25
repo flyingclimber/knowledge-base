@@ -1,0 +1,35 @@
+
+<html>
+  <head>
+    <meta charset='UTF-8'>
+    <link rel='stylesheet' href='http://output.jsbin.com/gefofo.css' />
+  </head>
+  <body>
+    <div id='container'>
+    
+      <h1>Google OAuth Setup Guide</h1>
+      <p>This guide will help you set up a Google API project that will be compatible with Nylas, but doesn’t cover how to get a refresh token. To see example code of how to retrieve a refresh token from Google, check out the example project <a href="https://github.com/nylas/nylas-python/tree/master/examples/nylas-connect">here</a>. To learn more about general OAuth setup, <a href="https://developers.google.com/identity/protocols/OAuth2WebServer">follow Google’s guide.</a></p>
+<p>Visit the <a href="https://console.developers.google.com/apis/library">Google Developer Console</a> and select <strong>Create Project</strong>. Give your project a descriptive name, click <strong>Create</strong> and wait for the activity to complete.</p>
+<p><img class="wysiwyg-text-align-center" src="https://support.nylas.com/hc/en-us/article_attachments/209036347/Screen_Shot_2016-07-05_at_3.44.03_PM.png" alt="" width="466" height="192" /></p>
+<p><img src="https://support.nylas.com/hc/en-us/article_attachments/209036367/a.png" alt="" /></p>
+<p>Once the project has been created, you <strong>must</strong> enable all of the following APIs by searching for their names:</p>
+<ul>
+<li>Gmail API</li>
+<li>Contacts API</li>
+<li>Calendar API</li>
+</ul>
+<p><img src="https://support.nylas.com/hc/en-us/article_attachments/209007488/b.png" alt="" width="717" height="256" /></p>
+<p><img src="https://support.nylas.com/hc/en-us/article_attachments/209036387/c.png" alt="" /></p>
+<p>After you’ve enabled the appropriate APIs, click on the credentials tab and create a new OAuth client ID.</p>
+<p><img src="https://support.nylas.com/hc/en-us/article_attachments/209007568/d.png" alt="" width="529" height="430" /></p>
+<p>Next you need to configure the consent screen. This is where you can add your logo and change how the OAuth page will look to your users. Be sure to add appropriate redirect and origin URIs. This is how you’ll receive the access and refresh tokens from Google.</p>
+<p><strong><img src="https://support.nylas.com/hc/en-us/article_attachments/209036447/e.png" alt="" /></strong></p>
+<p><strong>Note:</strong> If you're a paying customer, add <a href="mailto:support@nylas.com">support@nylas.com</a> as a Project Editor to your application and let us know that you’ve done so by emailing us here <a href="mailto:support@nylas.com?subject=GoogleAuthSetup">support@nylas.com</a></p>
+<p><img src="https://support.nylas.com/hc/en-us/article_attachments/209036507/f.png" alt="" /></p>
+<h1> </h1>
+<p> </p>
+      
+    </div>
+  </body>
+</html>
+    

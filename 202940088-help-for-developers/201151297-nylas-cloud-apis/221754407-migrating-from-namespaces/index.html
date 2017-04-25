@@ -1,0 +1,122 @@
+
+<html>
+  <head>
+    <meta charset='UTF-8'>
+    <link rel='stylesheet' href='http://output.jsbin.com/gefofo.css' />
+  </head>
+  <body>
+    <div id='container'>
+    
+      <h1>Migrating from Namespaces</h1>
+      <p>We’ve put this guide together to help you transition from using deprecated Namespace endpoints in the Nylas API.</p>
+<h2><a id="Why_make_this_change_4"></a>Why make this change?</h2>
+<p>We previously used namespaces as a reference to linked email accounts. In addition to having access to the <code>/n</code> endpoint to get a list of linked accounts, you were requiried to include the namespace id associated with an account in the URI. To simplify the API, we are removing this requirement and associating the linked email account with the credentials you are using.</p>
+<h2><a id="Whats_new_8"></a>What’s new?</h2>
+<h3><a id="Endpoint_URIs_11"></a>Endpoint URIs</h3>
+<p>When accessing resources, you no longer include the namespace id that is associated with the linked account in the URL:</p>
+<pre><code>:::xml
+GET https://api.nylas.com/n/&lt;namespace_id&gt;/threads
+</code></pre>
+<p>becomes</p>
+<pre><code>:::xml
+GET https://api.nylas.com/threads
+</code></pre>
+<h3><a id="Account_objects_27"></a>Account objects</h3>
+<p>The Account has been created to contain attributes previously accessible via namespaces.</p>
+<pre><code>:::xml
+GET https://api.nylas.com/account
+</code></pre>
+<p>It includes the all the same attributes, except for the <code>namespace_id</code> attribute. The <code>account_id</code> is now the primary identifier that corresponds to the resource. As described in the section below, the new <code>account_id</code> corresponds to the old <code>namespace_id</code> attribute as we are no longer exposing the old namespace <code>account_id</code> attribute.</p>
+<p>See the <a href="https://www.nylas.com//docs/platform/#account">Account</a> object documentation for more details.</p>
+<h2><a id="What_about_my_existing_namespace_ids_40"></a>What about my existing namespace id’s?</h2>
+<p>The value of the <code>namespace_id</code> attribute on the old <code>namespace</code> object associated with the email account is now the value of the <code>account_id</code> attribute on the new <code>account</code> object.</p>
+<h3><a id="Old_namespace_object_44"></a>Old namespace object:</h3>
+<pre><code>:::json
+[
+    {
+        "id": "awa6ltos76vz5hvphkp8k17nt",
+        "object": "namespace",
+        "namespace_id": "awa6ltos76vz5hvphkp8k17nt",
+        "account_id": "c5zc216uat483slypx67mu8i3",
+        "email_address": "ben.bitdiddle@gmail.com",
+        "name": "Ben Bitdiddle",
+        "provider": "gmail",
+        "organization_unit": "label"
+    }
+]
+</code></pre>
+<h3><a id="New_account_object_58"></a>New account object:</h3>
+<pre><code>:::json
+{
+    "id": "awa6ltos76vz5hvphkp8k17nt",
+    "account_id": "awa6ltos76vz5hvphkp8k17nt",
+    "object": "account",
+    "name": "Ben Bitdiddle",
+    "email_address": "benbitdiddle@gmail.com",
+    "provider": "gmail",
+    "organization_unit": "labels"
+}
+</code></pre>
+<p>Note that the <strong>old</strong> <code>account_id</code> value on the namespace object does not carry over.</p>
+<h2><a id="SDK_Changes_72"></a>SDK Changes</h2>
+<p>If you are using an SDK, you should upgrade to the latest stable version. It will reflect the transition from namespaces to accounts.</p>
+<h3><a id="Ruby_76"></a>Ruby</h3>
+<p>After creating the API client object, access resources directly from that object rather than specifying a namespace.</p>
+<pre><code>:::ruby
+ nylas = Nylas::API.new(config.nylas_app_id, config.nylas_app_secret, nylas_token)
+ 
+# Previously we had to get a namespace
+# namespace = nylas.namespaces.first
+# thread = namespace.threads.first
+
+# Now, just use the API object
+thread = nylas.threads.first
+</code></pre>
+<p>See more examples in the documentation in the <a href="https://github.com/nylas/nylas-ruby">nylas-ruby</a> repo.</p>
+<h3><a id="Python_92"></a>Python</h3>
+<p>After fetching an APIClient object, use that object to access resources.</p>
+<pre><code>:::python
+client = APIClient(APP_ID, APP_SECRET, token)
+
+# the old way to fetch a thread
+# thread = namespace.threads.first()
+
+# now use the client object
+thread = client.threads.first()
+</code></pre>
+<p>You used to have to specify the namespace when using the client object to access other api objects. Now, you access them without using the namespace:</p>
+<pre><code>:::python
+# previously specified a namespace object
+# messages = client.namespaces[0].messages
+
+# now use the client object
+messages = client.messages
+</code></pre>
+<p>See more examples in the documentation in the <a href="https://github.com/nylas/nylas-python">nylas-python</a> repo.</p>
+<h3><a id="Nodejs_116"></a>Node.js</h3>
+<pre><code>:::javascript
+//  Previously a namespace was required
+//  Nylas.with(accessToken).namespaces.first({}).then(function(namespace){
+//      namespace.threads.first().then(function(thread) {
+//          console.log(thread.subject);
+//          console.log(thread.snippet);
+//      })
+//  });
+
+// Now, simply use the Nylas object
+var nylas = Nylas.with(accessToken);
+nylas.threads.first().then(function(thread) {
+   console.log(thread.subject);
+   console.log(thread.snippet);
+})
+</code></pre>
+<p>See more examples in the documentation in the <a href="https://github.com/nylas/nylas-nodejs">nylas-nodejs</a> repo.</p>
+<h2><a id="How_long_will_the_namespaces_be_supported_136"></a>How long will the namespaces be supported?</h2>
+<p>Before announcing this change, we’ve worked with existing production customers to begin migrating their applications and found the switch to be surprisingly quick and painless. The full namespaces API will be officially disabled on October 15, 2015.</p>
+<h2><a id="I_have_more_questions_140"></a>I have more questions!</h2>
+<p>For full details, see the <a href="https://www.nylas.com/docs/platform/#account">Accounts</a>. And for additional questions, feel free to <a href="mailto:support@nylas.com">contact support</a>.</p>
+      
+    </div>
+  </body>
+</html>
+    

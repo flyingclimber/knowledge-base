@@ -1,0 +1,52 @@
+
+<html>
+  <head>
+    <meta charset='UTF-8'>
+    <link rel='stylesheet' href='http://output.jsbin.com/gefofo.css' />
+  </head>
+  <body>
+    <div id='container'>
+    
+      <h1>Migrating from Tags to Folders and Labels</h1>
+      <p>We’ve put this guide together to help you transition from using the deprecated <strong>Tags API</strong> to the new <a href="https://www.nylas.com/docs/platform/#folders">Folders and Labels API</a></p>
+<h2><a id="Why_make_this_change_4"></a>Why make this change?</h2>
+<p>The previous Tags API abstracted away the differences between folders and labels by presenting a unified entity (the “tag”). While a good idea in theory, we found this design to cause issues when implementing more advanced applications. We spent a lot of time talking with developers and getting feedback. (Thanks!)</p>
+<h2><a id="Whats_new_8"></a>What’s new?</h2>
+<p>The new API preserves the semantics and the differences between traditional folders and Gmail labels. In the new system, you can perform the same operations with folders and labels, but depending on the provider, the operation may translate differently. For example, applying a label to a message adds the label to the message (Gmail), but applying a folder moves the message into the folder (generic IMAP, Exchange).</p>
+<h2><a id="How_do_I_determine_whether_to_use_the_folders_endpoints_or_the_labels_endpoints_for_an_account_12"></a>How do I determine whether to use the <code>/folders</code> endpoints or the <code>/labels</code> endpoints for an account?</h2>
+<p>The account object contains an <code>organization_unit</code> attribute, set to “folder” or “label”, which will tell you whether to use the <code>/folders</code> endpoints or the <code>/labels</code> endpoints for that account. You can check this via the <a href="https://www.nylas.com/docs/platform/#account">Account</a>. Note this value is provider-dependent; a generic IMAP or Exchange message will only have the “folder” attribute and a Gmail message will only have the “labels” attribute.</p>
+<h2><a id="Previously_I_used_tags_to_get_the_folders_or_labels_of_a_thread_How_do_I_do_that_now_16"></a>Previously, I used tags to get the folders or labels of a thread. How do I do that now?</h2>
+<p>Folders and labels are now exposed on both the thread and message objects. Depending on the <code>organization_unit</code> parameter, the message object has either a <code>folder</code> or <code>labels</code> attribute. Similarly, a thread has a <code>folders</code> or <code>labels</code> attribute which contains the set of all folders or labels for its messages.</p>
+<h2><a id="Previously_I_used_tags_to_filter_threads_How_do_I_do_that_now_20"></a>Previously, I used tags to filter threads. How do I do that now?</h2>
+<p>We’ve introduced the new <a href="https://www.nylas.com/docs/platform/#filters"><code>in</code> filter</a> query parameter which may be used to filter messages and threads that are in either a folder (generic IMAP, Exchange) or have that label (Gmail). The <code>in</code> parameter is provider-agnostic and works for both folders and labels. Note we currently support only a single value for the <code>in</code> parameter.</p>
+<h2><a id="How_do_I_filter_by_unread_and_starred_that_do_not_map_to_folders_or_labels_24"></a>How do I filter by ‘unread’ and ‘starred’ that do not map to folders or labels?</h2>
+<p>Unread and starred properties are now boolean attributes on the message and thread object. For example, an unread, starred thread would return:</p>
+<pre><code>:::json
+{
+    "id": "5hvphkp8k17ntawa6ltos76vz",
+    "object": "thread",
+    "account_id": "awa6ltos76vz5hvphkp8k17nt",
+    "unread": true,
+    "starred": true,
+    "labels": ["inbox", "important"],
+    "subject": "Una Palabra",
+    ...
+}
+</code></pre>
+<p>The unread and starred values can be passed as query parameters to filter messages and threads. For example, to request all the starred threads in a user’s Inbox, you would make a request of the form:</p>
+<pre><code>:::xml
+GET https://api.nylas.com/threads?in=inbox&amp;starred=True
+</code></pre>
+<h2><a id="Are_folder_and_label_objects_exposed_in_the_Delta_API_as_well_50"></a>Are <code>folder</code> and <code>label</code> objects exposed in the Delta API as well?</h2>
+<p>We have recently exposed the <code>folder</code> and <code>label</code> objects in the <a href="https://www.nylas.com/docs/platform/#deltas">Delta API</a>. The <code>tags</code> objects will be removed when Tags API is fully disabled (see below).</p>
+<h2><a id="Im_using_the_Ruby_or_Python_SDK_Have_those_been_updated_54"></a>I’m using the Ruby or Python SDK. Have those been updated?</h2>
+<p>Yup, please make sure you’re running the latest version.</p>
+<h2><a id="How_long_will_the_tags_API_continue_functioning_58"></a>How long will the tags API continue functioning?</h2>
+<p>Before announcing this change, we’ve worked with existing production customers to begin migrating their applications and found the switch to be surprisingly quick and painless. Currently custom tag creation has been disabled. The full tags API will be officially disabled on September 30, 2015.</p>
+<h2><a id="I_have_more_questions_62"></a>I have more questions!</h2>
+<p>For full details, see the complete <a href="https://www.nylas.com/docs/platform/#folders">Labels and Folders documentation</a>. And for additional questions, feel free to <a href="mailto:support@nylas.com">contact support</a>.</p>
+      
+    </div>
+  </body>
+</html>
+    

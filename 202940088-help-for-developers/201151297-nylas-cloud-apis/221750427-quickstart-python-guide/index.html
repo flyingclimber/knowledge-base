@@ -1,0 +1,142 @@
+
+<html>
+  <head>
+    <meta charset='UTF-8'>
+    <link rel='stylesheet' href='http://output.jsbin.com/gefofo.css' />
+  </head>
+  <body>
+    <div id='container'>
+    
+      <h1>Quickstart Python Guide</h1>
+      <p>Nylas allows you to integrate your apps with your customers’ email, contacts, and calendars. The applications are as endless as your imagination.</p>
+<p>This guide will take you through setting up your development environment and the basic use of the nylas-python module. We will connect to an email account, send a message, and retrieve an email thread.</p>
+<h2>Set up your development environment</h2>
+<p>To complete this guide, you will need to have the following installed</p>
+<ul>
+<li>Python</li>
+<li>The nylas-python module</li>
+<li>Flask (<a href="#part2">for Part II</a>)</li>
+</ul>
+<p>If you are already familiar with setting environments and python packages you can skip to the next step of connecting your email account.</p>
+<h3><a id="Installing_Python_16"></a>Installing Python</h3>
+<p>If you are on a Mac or Linux machine, you probably already have Python installed. Open a Terminal window and verify this by issuing the following command:</p>
+<pre><code>$ which python
+</code></pre>
+<p>If you are using Windows or another platform, or Python is not installed, you can get further instructions on the official Python website.</p>
+<h3><a id="Installing_nylaspython_24"></a>Installing nylas-python</h3>
+<p>Create a new project directory, let’s call it first_nylas_app:</p>
+<pre><code>$ mkdir first_nylas_app
+</code></pre>
+<p>We recommend using <a href="http://docs.python-guide.org/en/latest/dev/virtualenvs/">virtual environments</a> to keep module dependencies within your project. If you are not familiar with these, check out <a href="http://docs.python-guide.org/en/latest/dev/virtualenvs/">this site</a>.</p>
+<p>If you have the pip package manager installed, install the virtualenv module as follows:</p>
+<pre><code>$ pip install virtualenv
+</code></pre>
+<p>otherwise you can use easy_install:</p>
+<pre><code>$ easy_install virtualenv
+</code></pre>
+<p>If you get an error similar to “Permission Denied”, more common if you are not using virtual environments as described above, prepend the command with <code>sudo</code>, ex. <code>sudo pip install virtualenv</code></p>
+<p>From your project director, first_nylas_app, create a virtual environment and activate it:</p>
+<pre><code>$ virtualenv .
+$ source ./bin/activate
+</code></pre>
+<p>Then, install the nylas module as follows:</p>
+<pre><code>$ ./bin/pip install nylas
+</code></pre>
+<p>We will wait until Part II to install the Flask module.</p>
+<h2><a id="Connecting_an_Email_Account_53"></a>Connecting an Email Account</h2>
+<p>To connect our app to an email account, we will do the following:</p>
+<ol>
+<li>Create a Nylas account</li>
+<li>Create an app in your Nylas dashboard to get an app id and secret</li>
+<li>Authorize your email account to get a token</li>
+</ol>
+<p>If you have not already, go to <a href="http://Nylas.com">Nylas.com</a> and sign up for an account. After you have done so, you will be taken to your “App Console”.</p>
+<p>From here, select “Create a new app”. Just name it “Test App” for now and leave the other fields blank.</p>
+<p>You now can have an App Id and App Secret. Note both of these down as we will be using them in an upcoming step.</p>
+<h3><a id="Getting_your_token_67"></a>Getting your token</h3>
+<p>The third piece of information we need is a token that we will get by authorizing your email client. Typically this will be done programmatically as outlined in the Authentication section of the API docs, but for our purposes we will keep it simple and get this token through your dashboard.</p>
+<p>Click on “Accounts” and then “Add Account”. Use the email address you want to experiment with (it can be your personal one), and click “Authenticate” to go through the flow. After the authentication with your email provider is complete you will see a token, the final piece of information we need. <strong>Note this down now and keep it in a safe place.</strong></p>
+<h2><a id="Creating_and_Using_a_Client_73"></a>Creating and Using a Client</h2>
+<p>Now that we have authorized our email account, it is time to use the Nylas API to do some electronic mail magic. First, we will create a client object using the id, secret, and token we got in the previous step and call methods on that object.</p>
+<h3><a id="Set_environment_variables_77"></a>Set environment variables</h3>
+<p>We want to get in the habit of not hard coding your app secret or tokens. We will set environment variable for these.</p>
+<pre><code>$ export NYLAS_APP_ID=&lt;Your App Id&gt;
+$ export NYLAS_APP_SECRET=&lt;Your App Secret&gt;
+$ export NYLAS_ACCOUNT_TOKEN=&lt;Your Email Account Token&gt;
+</code></pre>
+<p>Using your favorite editor, open a file in this directory and name it <a href="http://app.py">app.py</a>.</p>
+<p><strong>first_nylas_app/app.py</strong></p>
+<p>First we’ll import the client class from the nylas module and the os module</p>
+<pre><code>import os
+from nylas import APIClient
+</code></pre>
+<p>Then get the app id, secret, and token from the environment variables we set</p>
+<pre><code>app_id = os.environ.get('NYLAS_APP_ID')
+app_secret = os.environ.get('NYLAS_APP_SECRET')
+token = os.environ.get('NYLAS_ACCOUNT_TOKEN')
+</code></pre>
+<p>Now create the client object.</p>
+<pre><code>client = APIClient(app_id, app_secret, token)
+</code></pre>
+<p>We now have our client object and call the Nylas API through it. Let’s write some code to send and email and get the subject of the latest thread in our inbox.</p>
+<pre><code># Send an email
+draft = client.drafts.create()
+draft.to = [{'name': 'Ben', 'email': 'ben.bitdiddle@nylas.com'}]
+draft.subject = "Nylas is awesome!"
+draft.body = "Can't wait to build using this."
+draft.send()
+
+# Get the latest thread in your inbox
+thread = client.threads.first()
+print "SUBJECT: " + thread.subject
+</code></pre>
+<p>Save the file and run it.</p>
+<pre><code>$ python app.py
+</code></pre>
+<p>You should see in you email client that you have sent that email and also see the subject line output.</p>
+<h2><a id="And_so_much_more_123"></a>And so much more</h2>
+<p>There are many other things we can do through Nylas. Check out the API Documentation and the nylas-python git repo to explore more.</p>
+<p>When you are finished exploring a bit, let’s move on to Part II of this guide where we will create a basic Flask app to authenticate an email account through it using callbacks, and use some more advanced features of the Nylas API.</p>
+<h1 id="part2">Our first Nylas App</h1>
+<p>We will be using a python web framework called Flask to host a local webserver so we can demonstrate how to build an app that would call the Nylas API.</p>
+<h2><a id="Installing_Flask_134"></a>Installing Flask</h2>
+<p>From your project directory install the Flask module as follows:</p>
+<pre><code>$ ./bin/pip install flask
+</code></pre>
+<p>Now edit your application file, <code>app.py</code>, in this directory using your favorite editor. We will first just create an endpoint that will show your recent threads.</p>
+<p><strong>first_nylas_app/app.py</strong></p>
+<pre><code>:::python
+from flask import Flask, session, request, redirect, Response
+from nylas import APIClient
+import os
+
+app = Flask(__name__)
+app.debug = True
+app.secret_key = 'secret'
+
+# This will handle the endpoint http://yourapp.com/recent-threads
+@app.route('/recent-threads')
+def recent_threads():
+    app_id = os.environ.get('APP_ID')
+    app_secret = os.environ.get('APP_SECRET')
+    account_token = os.environ.get('ACCOUNT_TOKEN')
+
+    # Connect to the Nylas API, creating a client object
+    client = APIClient(app_id, app_secret, account_token)
+
+    # List the 5 most recent unread threads
+    response = ""
+    for thread in client.threads.where(unread=True, limit=5):
+        response += thread.subject
+        response += "&lt;br&gt;&lt;/br&gt;"
+
+    return response
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5555)
+</code></pre>
+      
+    </div>
+  </body>
+</html>
+    

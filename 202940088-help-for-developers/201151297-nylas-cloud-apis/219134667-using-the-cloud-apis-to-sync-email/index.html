@@ -1,0 +1,219 @@
+
+<html>
+  <head>
+    <meta charset='UTF-8'>
+    <link rel='stylesheet' href='http://output.jsbin.com/gefofo.css' />
+  </head>
+  <body>
+    <div id='container'>
+    
+      <h1>Using the Cloud APIs to Sync Email</h1>
+      <p> </p>
+<h1><a id="How_Nylas_syncs_mail_contacts_and_calendars_4"></a>How Nylas syncs mail, contacts, and calendars</h1>
+<p>When an account is connected to Nylas, the sync engine starts pulling in all mail for the account, prioritizing recent messages first (though mail isn’t strictly added in reverse chronological order). As new email arrives in the user’s mailbox, it is also added in parallel.</p>
+<p>For contacts and calendar syncing, events and contacts are downloaded from newest to oldest. New events or contacts added after the start of the sync are not downloaded until the initial sync is complete. Since the volume of data for contacts and calendar is typically not large, this isn’t generally a problem.</p>
+<p>Nylas continues to keep its data up-to-date with the backend provider through a number of mechanisms: keeping an IMAP IDLE connection open, using Exchange ActiveSync’s “ping” notifications, using webhooks from calendar providers, or, in the case that no better mechanism is available, simply polling the provider.</p>
+<h1><a id="Syncing_Strategies_12"></a>Syncing Strategies</h1>
+<h2><a id="Overview_13"></a>Overview</h2>
+<p>There are two main ways to pull in email information from an account:</p>
+<ul>
+<li>The <a href="https://www.nylas.com/docs/platform#threads">Threads</a> and <a href="https://www.nylas.com/docs/platform#messages">Messages</a> endpoints allows you retrieve all messages and threads, or <a href="https://www.nylas.com/docs/platform#filtering">filter</a> for a certain subset of them based on various constraints.</li>
+<li><a href="https://www.nylas.com/docs/platform#deltas">Deltas</a> allow you to process new data quickly without having to fetch an index of the user’s mailbox or perform a large number of API calls.</li>
+</ul>
+<p>You shouldn’t make any assumptions about the sync progress of an account. We recommend using both mechanisms to ensure you’re able to quickly provide data to a user when the account starts syncing (through the threads endpoint), and to quickly update the user when new mail comes through (through deltas). There are other caveats you should keep in mind that are discussed below.</p>
+<h2><a id="Threads_and_Messages_22"></a>Threads and Messages</h2>
+<p>In some cases, it’s easiest to request data from the Nylas API as it’s needed for display, without ever needing to store it locally. The <a href="https://www.nylas.com/docs/platform#threads">Threads</a> and <a href="https://www.nylas.com/docs/platform#messages">Messages</a> endpoints are great for this use case.</p>
+<p>For example, if your application provides a custom “Inbox” view, you could fetch data from the <code>/threads</code> endpoint and use it to render HTML or provide data to a single page JavaScript application. Making <code>/threads</code> requests on-demand rather than caching the data in a local database makes it easier to ensure the data is always current, and it’s easy to <a href="https://www.nylas.com/docs/platform#filtering">filter</a> messages too.</p>
+<p><strong>Note:</strong> When you first connect an account and fetch data from the <code>/threads</code> endpoint you won’t receive all of a user’s email if Nylas is still syncing it. You can’t make any assumptions about whether an account has finished syncing on Nylas’ servers, and it can take anywhere from a few minutes to several days depending on the account size.</p>
+<p>Tip: You could use the delta streaming purely as a notification method. New delta comes in? Just request the thread endpoint again for new messages. (Don’t forget to stay within our <a href="https://www.nylas.com/docs/platform#rate_limiting">rate limits</a>!)</p>
+<h2><a id="Deltas_33"></a>Deltas</h2>
+<p>The Nylas Sync Engine builds a transaction log that records every change as it synchronizes users’ mailboxes. Your application can use this transaction log, exposed through the Delta APIs, to build email applications that process incoming changes quickly, without fetching an index of the user’s mailbox, polling, or making a large number of API requests.</p>
+<p>The <a href="https://nylas.com/docs/platform/#deltas">Delta API documentation</a> describes the endpoint, request parameters, and response objects in detail. It also describes the difference between <a href="https://nylas.com/docs#streaming_delta_updates">streaming</a> and <a href="https://nylas.com/docs#long-polling_delta_updates">long polling</a> and when you would typically use each strategy.</p>
+<p>If your application wants to ingest emails as they are processed by the Nylas Sync Engine, the delta stream is an efficient solution.</p>
+<p> </p>
+<h2><a id="Deltas__Threads_45"></a>Deltas + Threads</h2>
+<p>By themselves, the <code>Threads</code> and <code>Deltas</code> APIs aren’t sufficient to build a full, realtime view of a user’s mailbox, since:</p>
+<ul>
+<li>Threads only return mail that has already been processed by Nylas. If a user has just connected their account, a request to <code>/threads</code> might only return a few Thread objects that Nylas has processed. A few hours later, <code>/threads</code> might return many thousand objects since more mail has been processed.</li>
+<li>Deltas only return mail as it’s being processed by Nylas. Listening to deltas tells your application that mail is available which was was not previously synced or has been modified.</li>
+</ul>
+<p>To build a robust application that maintains an up-to-date cache of a user’s entire mailbox, you should leverage both Threads and Deltas. Be sure to:</p>
+<ul>
+<li>Begin listening to deltas (changes to the mailbox) at the same time you start paginating <code>/threads</code> (existing data in the mailbox.)</li>
+<li>Always “upsert” when you retrieve objects. A delta about a thread should create or update that thread in your cache.</li>
+</ul>
+<p>If your application is only interested in caching a subset of mail—for example, mail in the last month, or mail in a particular folder—you should:</p>
+<ul>
+<li>Limit pagination using <code>threads</code> filter parameters</li>
+<li>Listen for deltas, but ignore deltas about mail you do not care about.</li>
+</ul>
+<p>In general, you should obtain the cursor first before paginating through <code>/threads</code> to ensure you don’t miss any emails.</p>
+<ol>
+<li>Authorize and account</li>
+<li>Obtain a cursor</li>
+<li>Start listening for deltas</li>
+<li>Paginate <code>/threads</code> (remember to account for duplicates)</li>
+</ol>
+<h1><a id="Managing_multiple_account_syncs_70"></a>Managing multiple account syncs</h1>
+<p>The <a href="https://nylas.com/docs/platform/#deltas">Delta API documentation</a> goes into detail on when to use long polling versus streaming to call the delta endpoint. Depending on what strategy you use and your software stack, the number of parallel processes or open connections when syncing a large number of accounts may be a concern.</p>
+<p>In our experience, clients have been successful using the Delta API with large numbers of accounts using the following asynchronous frameworks:</p>
+<ul>
+<li>Python: <a href="http://www.gevent.org/">gevent</a></li>
+<li>Ruby: <a href="https://github.com/eventmachine/eventmachine">EventMachine</a></li>
+<li>NodeJS: (built in asynchronous IO)</li>
+</ul>
+<p> </p>
+<h1><a id="Using_the_Delta_sync_API_0"></a>Using Deltas - <a href="https://github.com/nylas/nylas-ruby">Ruby SDK</a> Example</h1>
+<p>The delta sync API allows fetching all the changes that occurred after a specific time. <a href="https://nylas.com/docs/platform/#deltas">Read this</a> for more details about the API.</p>
+<pre><code class="language-ruby"><span class="hljs-comment"># Get an API cursor. Cursors are API objects identifying an individual change.</span>
+<span class="hljs-comment"># The latest cursor is the id of the latest change which was applied</span>
+<span class="hljs-comment"># to an API object (e.g: a message got read, an event got created, etc.)</span>
+cursor = nylas.latest_cursor
+
+last_cursor = <span class="hljs-keyword">nil</span>
+nylas.deltas(cursor) <span class="hljs-keyword">do</span> |event, object|
+  <span class="hljs-keyword">if</span> event == <span class="hljs-string">"create"</span> <span class="hljs-keyword">or</span> event == <span class="hljs-string">"modify"</span>
+    <span class="hljs-keyword">if</span> object.is_a?(<span class="hljs-constant">Nylas::Contact</span>)
+      puts <span class="hljs-string">"<span class="hljs-subst">#{object.name}</span> - <span class="hljs-subst">#{object.email}</span>"</span>
+    <span class="hljs-keyword">elsif</span> object.is_a?(<span class="hljs-constant">Nylas::Event</span>)
+      puts <span class="hljs-string">"Event!"</span>
+    <span class="hljs-keyword">end</span>
+  <span class="hljs-keyword">elsif</span> event == <span class="hljs-string">"delete"</span>
+    <span class="hljs-comment"># In the case of a deletion, the API only returns the ID of the object.</span>
+    <span class="hljs-comment"># In this case, the Ruby SDK returns a dummy object with only the id field</span>
+    <span class="hljs-comment"># set.</span>
+    puts <span class="hljs-string">"Deleting from collection <span class="hljs-subst">#{object.<span class="hljs-keyword">class</span>.name}</span>, id: <span class="hljs-subst">#{object}</span>"</span>
+  <span class="hljs-keyword">end</span>
+  last_cursor = object.cursor
+<span class="hljs-keyword">end</span>
+
+<span class="hljs-comment"># Don't forget to save the last cursor so that we can pick up changes</span>
+<span class="hljs-comment"># from where we left.</span>
+save_to_db(last_cursor)
+</code></pre>
+<h2><a id="Using_the_Delta_sync_streaming_API_33"></a>Using the Delta sync streaming API</h2>
+<p>The streaming API will receive deltas in real time, without needing to repeatedly poll.</p>
+<h3><a id="MRI_37"></a>MRI</h3>
+<p>MRI uses EventMachine for async IO.</p>
+<pre><code class="language-ruby">cursor = nylas.latest_cursor
+
+<span class="hljs-constant">EventMachine</span>.run <span class="hljs-keyword">do</span>
+  nylas.delta_stream(cursor) <span class="hljs-keyword">do</span> |event, object|
+    <span class="hljs-keyword">if</span> event == <span class="hljs-string">"create"</span> <span class="hljs-keyword">or</span> event == <span class="hljs-string">"modify"</span>
+      <span class="hljs-keyword">if</span> object.is_a?(<span class="hljs-constant">Nylas::Contact</span>)
+        puts <span class="hljs-string">"<span class="hljs-subst">#{object.name}</span> - <span class="hljs-subst">#{object.email}</span>"</span>
+      <span class="hljs-keyword">elsif</span> object.is_a?(<span class="hljs-constant">Nylas::Event</span>)
+        puts <span class="hljs-string">"Event!"</span>
+      <span class="hljs-keyword">end</span>
+    <span class="hljs-keyword">elsif</span> event == <span class="hljs-string">"delete"</span>
+      <span class="hljs-comment"># In the case of a deletion, the API only returns the ID of the object.</span>
+      <span class="hljs-comment"># In this case, the Ruby SDK returns a dummy object with only the id field</span>
+      <span class="hljs-comment"># set.</span>
+      puts <span class="hljs-string">"Deleting from collection <span class="hljs-subst">#{object.<span class="hljs-keyword">class</span>.name}</span>, id: <span class="hljs-subst">#{object}</span>"</span>
+    <span class="hljs-keyword">end</span>
+  <span class="hljs-keyword">end</span>
+<span class="hljs-keyword">end</span>
+</code></pre>
+<p>To receive streams from multiple accounts, call <code>delta_stream</code> for each of them inside an <code>EventMachine.run</code> block.</p>
+<pre><code class="language-ruby">api_handles = [] <span class="hljs-comment"># a list of Nylas::API objects</span>
+
+<span class="hljs-constant">EventMachine</span>.run <span class="hljs-keyword">do</span>
+  api_handles.each <span class="hljs-keyword">do</span> |a|
+    cursor = a.latest_cursor()
+    a.delta_stream(cursor) <span class="hljs-keyword">do</span> |event, object|
+      puts object
+    <span class="hljs-keyword">end</span>
+  <span class="hljs-keyword">end</span>
+<span class="hljs-keyword">end</span>
+</code></pre>
+<h3><a id="JRuby_77"></a>JRuby</h3>
+<p>The JRuby implementation uses the <a href="https://github.com/mguymon/sjs">Simple JSON Streaming gem</a> instead of EventMachine and YAJL. No need for the <code>EventMachine.run</code> block.</p>
+<pre><code class="language-ruby">cursor = nylas.latest_cursor
+
+nylas.delta_stream(cursor) <span class="hljs-keyword">do</span> |event, object|
+  <span class="hljs-keyword">if</span> event == <span class="hljs-string">"create"</span> <span class="hljs-keyword">or</span> event == <span class="hljs-string">"modify"</span>
+    <span class="hljs-keyword">if</span> object.is_a?(<span class="hljs-constant">Nylas::Contact</span>)
+      puts <span class="hljs-string">"<span class="hljs-subst">#{object.name}</span> - <span class="hljs-subst">#{object.email}</span>"</span>
+    <span class="hljs-keyword">elsif</span> object.is_a?(<span class="hljs-constant">Nylas::Event</span>)
+      puts <span class="hljs-string">"Event!"</span>
+    <span class="hljs-keyword">end</span>
+  <span class="hljs-keyword">elsif</span> event == <span class="hljs-string">"delete"</span>
+    <span class="hljs-comment"># In the case of a deletion, the API only returns the ID of the object.</span>
+    <span class="hljs-comment"># In this case, the Ruby SDK returns a dummy object with only the id field</span>
+    <span class="hljs-comment"># set.</span>
+    puts <span class="hljs-string">"Deleting from collection <span class="hljs-subst">#{object.<span class="hljs-keyword">class</span>.name}</span>, id: <span class="hljs-subst">#{object}</span>"</span>
+  <span class="hljs-keyword">end</span>
+<span class="hljs-keyword">end</span>
+</code></pre>
+<p>To receive streams from multiple accounts, call <code>delta_stream</code> for each of them inside an <code>EventMachine.run</code> block.</p>
+<pre><code class="language-ruby">api_handles = [] <span class="hljs-comment"># a list of Nylas::API objects</span>
+
+api_handles.each <span class="hljs-keyword">do</span> |a|
+  cursor = a.latest_cursor()
+  a.delta_stream(cursor) <span class="hljs-keyword">do</span> |event, object|
+    puts object
+  <span class="hljs-keyword">end</span>
+<span class="hljs-keyword">end</span>
+</code></pre>
+<h2><a id="Exclude_changes_from_a_specific_type__get_only_messages_114"></a>Exclude changes from a specific type — get only messages</h2>
+<pre><code class="language-ruby">nylas.deltas(cursor, exclude=[<span class="hljs-constant">Nylas::Contact</span>,
+                              <span class="hljs-constant">Nylas::Event</span>,
+                              <span class="hljs-constant">Nylas::File</span>,
+                              <span class="hljs-constant">Nylas::Tag</span>,
+                              <span class="hljs-constant">Nylas::Thread</span>]) <span class="hljs-keyword">do</span> |event, object|
+  <span class="hljs-keyword">if</span> [<span class="hljs-string">'create'</span>, <span class="hljs-string">'modify'</span>].<span class="hljs-keyword">include</span>? event
+    puts object.subject
+  <span class="hljs-keyword">end</span>
+<span class="hljs-keyword">end</span>
+</code></pre>
+<h2><a id="Expand_Messages_from_the_Delta_stream_128"></a>Expand Messages from the Delta stream</h2>
+<p>It’s possible to ask the Deltas and delta stream API to return <a href="https://nylas.com/docs/platform#expanded_message_view">expanded messages</a> directly:</p>
+<pre><code class="language-ruby">nylas.deltas(cursor, exclude=[<span class="hljs-constant">Nylas::Contact</span>,
+                              <span class="hljs-constant">Nylas::Event</span>,
+                              <span class="hljs-constant">Nylas::File</span>,
+                              <span class="hljs-constant">Nylas::Tag</span>,
+                              <span class="hljs-constant">Nylas::Thread</span>], expanded_view=<span class="hljs-keyword">true</span>) <span class="hljs-keyword">do</span> |event, object|
+  <span class="hljs-keyword">if</span> [<span class="hljs-string">'create'</span>, <span class="hljs-string">'modify'</span>].<span class="hljs-keyword">include</span>? event
+    <span class="hljs-keyword">if</span> obj.is_a?(<span class="hljs-constant">Nylas::Message</span>)
+      puts obj.subject
+      puts obj.message_id
+    <span class="hljs-keyword">end</span>
+  <span class="hljs-keyword">end</span>
+<span class="hljs-keyword">end</span>
+</code></pre>
+<p> </p>
+<h1><a id="Using_the_Delta_sync_API_0"></a>Using Deltas - <a href="https://github.com/nylas/nylas-nodejs">Node SDK</a> Example</h1>
+<pre><code class="language-javascript"><span class="hljs-keyword">var</span> DELTA_EXCLUDE_TYPES = [<span class="hljs-string">'contact'</span>, <span class="hljs-string">'calendar'</span>, <span class="hljs-string">'event'</span>, <span class="hljs-string">'file'</span>, <span class="hljs-string">'tag'</span>];
+<span class="hljs-keyword">var</span> nylas = Nylas.with(accessToken);
+
+nylas.deltas.latestCursor(<span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">error, cursor</span>) </span>{
+
+  <span class="hljs-comment">// Save inital cursor.</span>
+  persistCursor(cursor);
+
+  <span class="hljs-comment">// Start the stream and add event handlers.</span>
+  <span class="hljs-keyword">var</span> stream = nylas.deltas.startStream(cursor, DELTA_EXCLUDE_TYPES);
+
+  stream.on(<span class="hljs-string">'delta'</span>, <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">delta</span>) </span>{
+    <span class="hljs-comment">// Handle the new delta here.</span>
+    <span class="hljs-built_in">console</span>.log(<span class="hljs-string">'Received delta:'</span>, delta);
+    <span class="hljs-comment">// Save new cursor so this delta doesn't need to be re-fetched for future streams.</span>
+    persistCursor(delta.cursor);
+
+  }).on(<span class="hljs-string">'error'</span>, <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">err</span>) </span>{
+    <span class="hljs-comment">// Handle errors here, such as by restarting the stream at the last cursor.</span>
+    <span class="hljs-built_in">console</span>.error(<span class="hljs-string">'Delta streaming error:'</span>, err);
+
+  });
+
+  <span class="hljs-comment">// Closing the stream explicitly, if needed</span>
+  stopButton.addEventListener(<span class="hljs-string">'click'</span>, <span class="hljs-function"><span class="hljs-keyword">function</span>() </span>{
+    stream.close();
+  });
+})
+</code></pre>
+      
+    </div>
+  </body>
+</html>
+    

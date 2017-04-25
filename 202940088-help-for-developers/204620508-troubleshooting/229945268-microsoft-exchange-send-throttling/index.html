@@ -1,0 +1,18 @@
+
+<html>
+  <head>
+    <meta charset='UTF-8'>
+    <link rel='stylesheet' href='http://output.jsbin.com/gefofo.css' />
+  </head>
+  <body>
+    <div id='container'>
+    
+      <h1>Microsoft Exchange Send Throttling</h1>
+      <p>Exchange servers are sometimes configured with strict send throttling policies that will prevent an account from sending lots of email over a short period of time. In general, each server can have their own configuration which means a one-size fits all sending policy doesn't always work.</p>
+<p>In the case that you see provider send throttling with a 429 status code, you should retry the send with exponential backoff. Some Exchange servers have throttling policies which limit us to a certain number of requests per block of 20 minutes. Sometimes you'll see a send succeed if you retry them 2 minutes later. Multiply the backoff time by some constant (like 2 or 3) after each attempt, and attempt up to some MAX amount of times.</p>
+<p>If the account needs to send at rate that is greater than the throttling policy allows, you should contact your Exchange system administrator to discuss the specific throttling policy that is in place and how to change it.</p>
+      
+    </div>
+  </body>
+</html>
+    

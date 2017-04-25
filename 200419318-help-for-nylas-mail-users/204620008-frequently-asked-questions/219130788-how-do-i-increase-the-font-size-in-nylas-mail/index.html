@@ -1,0 +1,47 @@
+
+<html>
+  <head>
+    <meta charset='UTF-8'>
+    <link rel='stylesheet' href='http://output.jsbin.com/gefofo.css' />
+  </head>
+  <body>
+    <div id='container'>
+    
+      <h1>How do I increase the font size in Nylas Mail?</h1>
+      <p>Nylas Mail doesn't officially support changing the font size. However, for some displays and Linux machines, it's necessary to increase the scale of the UI to make Nylas Mail more usable.</p>
+<p>You can scale up the entire interface of Nylas Mail by opening your config file at ~/.nylas/config.json, and adding a value greater than 1 for `core.workspace.interfaceZoom` (1.2 = 120%, 1.4 = 140%, etc.), like this:  </p>
+<pre><code>
+{
+
+  "*": {
+
+    "env": "production",
+
+    "core": {
+
+      "workspace": {
+
+          "interfaceZoom": 1.2
+
+      },
+
+      "themes": [
+
+        "ui-light"
+
+      ],
+
+      .....
+<br /><br />
+
+</code></pre>
+<p>You can also do a global search and replace for .snippet-and-labels .snippet and make it .snippet-and-labels .snippet {\n font-size: 16px;...</p>
+<p>That's because I noticed one of the tags I needed to change was "snippet" or "snippet-and-labels". This changed all the compile-cache files. </p>
+<p>In thread.less you can also make this change:</p>
+<p>.participants, <br />.timestamp { <br />font-size: 16px; <br />} <br />.subject { <br />color: <a href="/agent/tickets/000000" target="_blank" rel="ticket">#000000</a>; <br />font-size: 16px;</p>
+<p> </p>
+      
+    </div>
+  </body>
+</html>
+    
